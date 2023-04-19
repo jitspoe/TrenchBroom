@@ -77,6 +77,8 @@
 #include <kdl/string_format.h>
 #include <kdl/string_utils.h>
 
+#include <vecmath/mat.h>
+#include <vecmath/mat_ext.h>
 #include <vecmath/vec.h>
 #include <vecmath/vec_io.h>
 
@@ -88,6 +90,7 @@
 #include <vector>
 
 #include <QApplication>
+#include <QButtonGroup>
 #include <QChildEvent>
 #include <QClipboard>
 #include <QComboBox>
@@ -97,6 +100,8 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPushButton>
+#include <QRadioButton>
+#include <QSpinBox>
 #include <QStatusBar>
 #include <QString>
 #include <QStringList>
@@ -2233,6 +2238,58 @@ void MapFrame::revealTexture(const Assets::Texture* texture)
   m_inspector->faceInspector()->revealTexture(texture);
 }
 
+void MapFrame::showPrimativeDialog()
+{
+  PrimativeWindow *window = new PrimativeWindow(this);
+  showModelessDialog(window);
+}
+
+void MapFrame::makePrimative()
+{
+  std::vector<vm::vec3> positions;
+
+  vm::vec3 size;
+  vm::vec3 position = vm::vec3(0.0, 0.0, 0.0);
+  const auto& selectedNodes = m_document->selectedNodes();
+  bool useBrushBounds = m_primativeData.useBrushBounds;
+  Model::BrushNode* selectedBrush = nullptr;
+  if (!selectedNodes.brushes().empty()) {
+    selectedBrush = selectedNodes.brushes().front();
+    const auto& bounds = selectedBrush->logicalBounds();
+    position = bounds.center();
+    size = bounds.max - bounds.min;
+    position[2] = bounds.min[2];
+  } else {
+    useBrushBounds = false;
+  }
+
+  if (!useBrushBounds) {
+    size[0] = m_primativeData.diameter;
+    size[1] = m_primativeData.diameter;
+    size[2] = m_primativeData.height;
+  }
+
+  int numSides = m_primativeData.numSides;
+  positions.reserve((unsigned int)numSides * 2);
+  for (int i = 0; i < 2; ++i) {
+    for (int j = 0; j < numSides; ++j) {
+      vm::vec3 v;
+      float angle = float(j) * vm::Cf::two_pi() / float(numSides);
+      v[0] = std::cos(angle) * 0.5 * size[0];
+      v[1] = std::sin(angle) * 0.5 * size[1];
+      v[2] = i * size[2];
+      v = v + position;
+      positions.push_back(v);
+    }
+  }
+  // This could stand to be done better so we don't have 2 undo's.
+  if (m_primativeData.replaceSelectedBrush)
+  {
+    m_document->deleteObjects();
+  }
+  m_document->createBrush(positions);
+}
+
 void MapFrame::debugPrintVertices()
 {
   m_document->printVertices();
@@ -2472,6 +2529,103 @@ void MapFrame::triggerAutosave()
     m_autosaver->triggerAutosave(logger());
   }
 }
+
+
+// PrimativeWindow
+
+PrimativeWindow::PrimativeWindow(QWidget* parent)
+  : QDialog(parent)
+{
+  setWindowTitle(tr("Make Primative"));
+  QLabel* numSidesLabel = new QLabel(tr("Number of sides:"));
+  QSpinBox* numSidesBox = new QSpinBox();
+  QRadioButton* stylePlaneButton = new QRadioButton(tr("Plane Style"));
+  QRadioButton* styleVertexButton = new QRadioButton(tr("Vertex Style"));
+  QButtonGroup* styleButtonGroup = new QButtonGroup();
+  QLabel* replaceSelectedBrushLabel = new QLabel(tr("Replace selected brush:"));
+  QCheckBox* replaceSelectedBrushCheck = new QCheckBox();
+  QLabel* useBrushBoundsLabel = new QLabel(tr("Use brush bounds:"));
+  QCheckBox* useBrushBoundsCheck = new QCheckBox();
+  QLabel* radiusLabel = new QLabel(tr("Radius:"));
+  QSpinBox* radiusBox = new QSpinBox();
+  QLabel* diameterLabel = new QLabel(tr("Diameter:"));
+  QSpinBox* diameterBox = new QSpinBox();
+  QLabel* heightLabel = new QLabel(tr("Height:"));
+  QSpinBox* heightBox = new QSpinBox();
+  QGridLayout* gridLayout = new QGridLayout();
+  QPushButton* button = new QPushButton(tr("Create Brush"));
+  QVBoxLayout* outerVBoxLayout = new QVBoxLayout();
+
+  m_primativeData = ((MapFrame*)(parent))->m_primativeData; // Create a local copy of the primative data in case the user cancels.
+  numSidesBox->setRange(3, 256); // set before connecting callbacks because it will override the values
+  numSidesBox->setValue(m_primativeData.numSides);
+  radiusBox->setRange(1, 4096);
+  radiusBox->setValue(m_primativeData.diameter / 2.0f);
+  diameterBox->setRange(2, 8192);
+  diameterBox->setSingleStep(2);
+  diameterBox->setValue(m_primativeData.diameter);
+  heightBox->setRange(1, 4096);
+  heightBox->setValue(m_primativeData.height);
+  replaceSelectedBrushCheck->setChecked(m_primativeData.replaceSelectedBrush);
+
+  connect(numSidesBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
+    [=](int numSidesValue) {
+      this->m_primativeData.numSides = numSidesValue;
+    });
+  connect(radiusBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
+    [=](int radiusValue) {
+      this->m_primativeData.diameter = radiusValue * 2.0f;
+      diameterBox->setValue(radiusValue * 2.0f);
+    });
+  connect(diameterBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
+    [=](int diameterValue) {
+      this->m_primativeData.diameter = diameterValue;
+      radiusBox->setValue(diameterValue / 2.0f);
+    });
+  connect(replaceSelectedBrushCheck, &QCheckBox::stateChanged,
+    [=](int state) {
+      this->m_primativeData.replaceSelectedBrush = state != Qt::Unchecked;
+    });
+  connect(useBrushBoundsCheck, &QCheckBox::stateChanged,
+    [=](int state) {
+      radiusBox->setEnabled(state == Qt::Unchecked);
+      radiusLabel->setEnabled(state == Qt::Unchecked);
+      diameterBox->setEnabled(state == Qt::Unchecked);
+      diameterLabel->setEnabled(state == Qt::Unchecked);
+      heightBox->setEnabled(state == Qt::Unchecked);
+      heightLabel->setEnabled(state == Qt::Unchecked);
+      this->m_primativeData.useBrushBounds = state != Qt::Unchecked;
+    });
+  connect(button, &QPushButton::clicked, this,
+    [=]() {
+      ((MapFrame*)(parent))->m_primativeData = m_primativeData;
+      ((MapFrame*)(parent))->makePrimative();
+    });
+
+  useBrushBoundsCheck->setChecked(m_primativeData.useBrushBounds); // Set after connecting callbacks so the setEnabled logic works.
+  styleButtonGroup->addButton(stylePlaneButton);
+  styleButtonGroup->addButton(styleVertexButton);
+  int row = 0;
+  gridLayout->addWidget(numSidesLabel, row, 0);
+  gridLayout->addWidget(numSidesBox, row, 1);
+  gridLayout->addWidget(stylePlaneButton, ++row, 0);
+  gridLayout->addWidget(styleVertexButton, row, 1);
+  gridLayout->addWidget(replaceSelectedBrushLabel, ++row, 0);
+  gridLayout->addWidget(replaceSelectedBrushCheck, row, 1);
+  gridLayout->addWidget(useBrushBoundsLabel, ++row, 0);
+  gridLayout->addWidget(useBrushBoundsCheck, row, 1);
+  gridLayout->addWidget(radiusLabel, ++row, 0);
+  gridLayout->addWidget(radiusBox, row, 1);
+  gridLayout->addWidget(diameterLabel, ++row, 0);
+  gridLayout->addWidget(diameterBox, row, 1);
+  gridLayout->addWidget(heightLabel, ++row, 0);
+  gridLayout->addWidget(heightBox, row, 1);
+  outerVBoxLayout->addLayout(gridLayout, 1);
+  outerVBoxLayout->addStretch();
+  outerVBoxLayout->addWidget(button, 1);
+  setLayout(outerVBoxLayout);
+}
+
 
 // DebugPaletteWindow
 

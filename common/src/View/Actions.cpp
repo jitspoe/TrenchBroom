@@ -1511,6 +1511,12 @@ void ActionManager::createEditMenu()
     },
     IO::Path("FaceTool.svg")));
   toolMenu.addItem(createMenuAction(
+    IO::Path("Menu/Edit/Tools/Make Primative"),
+    QObject::tr("Make Primative"),
+    0,
+    [](ActionExecutionContext &context) { context.frame()->showPrimativeDialog(); },
+    [](ActionExecutionContext &context) { return context.hasDocument(); }));
+  toolMenu.addItem(createMenuAction(
     IO::Path("Controls/Map view/Deactivate current tool"),
     QObject::tr("Deactivate Current Tool"),
     Qt::CTRL + Qt::Key_Escape,
