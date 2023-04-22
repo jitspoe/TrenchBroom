@@ -149,6 +149,11 @@ void SwitchableMapViewContainer::deactivateTool()
   m_toolBox->deactivateAllTools();
 }
 
+bool SwitchableMapViewContainer::toolAllowsObjectDeletion() const
+{
+  return createPrimitiveBrushToolActive();
+}
+
 bool SwitchableMapViewContainer::createComplexBrushToolActive() const
 {
   return m_toolBox->createComplexBrushToolActive();

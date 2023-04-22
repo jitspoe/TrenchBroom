@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2010-2017 Kristian Duske
+ Copyright (C) 2010-2023 Kristian Duske, Nathan "jitspoe" Wulf
 
  This file is part of TrenchBroom.
 
@@ -21,7 +21,7 @@
 
 #include "FloatType.h"
 #include "View/CreateBrushToolBase.h"
-
+#include <vecmath/bbox.h>
 #include <memory>
 
 namespace TrenchBroom
@@ -30,11 +30,21 @@ namespace View
 {
 class MapDocument;
 
-class CreateSimpleBrushTool : public CreateBrushToolBase
+struct PrimitiveBrushData
+{
+  int numSides = 8;
+};
+
+class CreatePrimitiveBrushTool : public CreateBrushToolBase
 {
 public:
-  explicit CreateSimpleBrushTool(std::weak_ptr<MapDocument> document);
+  explicit CreatePrimitiveBrushTool(std::weak_ptr<MapDocument> document);
   void update(const vm::bbox3& bounds);
+  void update();
+  PrimitiveBrushData m_primitiveBrushData;
+private:
+  vm::bbox3 m_previousBounds;
+  QWidget* doCreatePage(QWidget* parent) override;
 };
 } // namespace View
 } // namespace TrenchBroom

@@ -87,6 +87,8 @@ public:
   bool anyToolActive() const;
   void deactivateTool();
 
+  bool toolAllowsObjectDeletion() const;
+
   bool createComplexBrushToolActive() const;
   bool canToggleCreateComplexBrushTool() const;
   void toggleCreateComplexBrushTool();

@@ -48,6 +48,7 @@
 #include "View/ClipToolController.h"
 #include "View/CreateComplexBrushToolController3D.h"
 #include "View/CreateEntityToolController.h"
+#include "View/CreatePrimitiveBrushToolController3D.h"
 #include "View/CreateSimpleBrushToolController3D.h"
 #include "View/EdgeTool.h"
 #include "View/EdgeToolController.h"

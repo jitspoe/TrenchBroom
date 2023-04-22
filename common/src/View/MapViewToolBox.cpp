@@ -22,6 +22,7 @@
 #include "View/ClipTool.h"
 #include "View/CreateComplexBrushTool.h"
 #include "View/CreateEntityTool.h"
+#include "View/CreatePrimitiveBrushTool.h"
 #include "View/CreateSimpleBrushTool.h"
 #include "View/EdgeTool.h"
 #include "View/ExtrudeTool.h"

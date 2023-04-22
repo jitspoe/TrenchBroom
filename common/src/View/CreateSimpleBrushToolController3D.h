@@ -56,37 +56,3 @@ private:
 };
 } // namespace View
 } // namespace TrenchBroom
-
-
-// JITODO: Create new file for this:
-
-namespace TrenchBroom
-{
-namespace View
-{
-class CreatePrimitiveBrushTool;
-class DragTracker;
-class MapDocument;
-
-class CreatePrimitiveBrushToolController3D : public ToolController
-{
-private:
-  CreatePrimitiveBrushTool& m_tool;
-  std::weak_ptr<MapDocument> m_document;
-
-  vm::vec3 m_initialPoint;
-
-public:
-  CreatePrimitiveBrushToolController3D(
-    CreatePrimitiveBrushTool& tool, std::weak_ptr<MapDocument> document);
-
-private:
-  Tool& tool() override;
-  const Tool& tool() const override;
-
-  std::unique_ptr<DragTracker> acceptMouseDrag(const InputState& inputState) override;
-
-  bool cancel() override;
-};
-} // namespace View
-} // namespace TrenchBroom

@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2010-2017 Kristian Duske
+ Copyright (C) 2010-2023 Kristian Duske, Nathan "jitspoe" Wulf
 
  This file is part of TrenchBroom.
 
@@ -19,22 +19,46 @@
 
 #pragma once
 
-#include "FloatType.h"
-#include "View/CreateBrushToolBase.h"
+#include "NotifierConnection.h"
 
 #include <memory>
+
+#include <QWidget>
+
+class QAbstractButton;
+class QLineEdit;
 
 namespace TrenchBroom
 {
 namespace View
 {
 class MapDocument;
+class Selection;
+class CreatePrimitiveBrushTool;
 
-class CreateSimpleBrushTool : public CreateBrushToolBase
+class CreatePrimitiveBrushToolPage : public QWidget
 {
+  Q_OBJECT
+private:
+  std::weak_ptr<MapDocument> m_document;
+  CreatePrimitiveBrushTool& m_tool;
+  QLineEdit* m_offset;
+  QAbstractButton* m_button;
+  NotifierConnection m_notifierConnection;
+
 public:
-  explicit CreateSimpleBrushTool(std::weak_ptr<MapDocument> document);
-  void update(const vm::bbox3& bounds);
+  explicit CreatePrimitiveBrushToolPage(
+    std::weak_ptr<MapDocument> document, CreatePrimitiveBrushTool& tool, QWidget* parent = nullptr);
+
+private:
+  void connectObservers();
+
+  void createGui();
+  void updateGui();
+
+  void selectionDidChange(const Selection& selection);
+
+  void applyMove();
 };
 } // namespace View
 } // namespace TrenchBroom

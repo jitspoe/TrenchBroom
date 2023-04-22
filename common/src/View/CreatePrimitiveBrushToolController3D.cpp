@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2010-2017 Kristian Duske
+ Copyright (C) 2010-2023 Kristian Duske, Nathan "jitspoe" Wulf
 
  This file is part of TrenchBroom.
 
@@ -17,7 +17,7 @@
  along with TrenchBroom. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreateSimpleBrushToolController3D.h"
+#include "CreatePrimitiveBrushToolController3D.h"
 
 #include "FloatType.h"
 #include "Model/BrushFace.h"
@@ -27,7 +27,7 @@
 #include "Model/PickResult.h"
 #include "PreferenceManager.h"
 #include "Renderer/Camera.h"
-#include "View/CreateSimpleBrushTool.h"
+#include "View/CreatePrimitiveBrushTool.h"
 #include "View/Grid.h"
 #include "View/HandleDragTracker.h"
 #include "View/InputState.h"
@@ -46,33 +46,33 @@ namespace TrenchBroom
 {
 namespace View
 {
-CreateSimpleBrushToolController3D::CreateSimpleBrushToolController3D(
-  CreateSimpleBrushTool& tool, std::weak_ptr<MapDocument> document)
+CreatePrimitiveBrushToolController3D::CreatePrimitiveBrushToolController3D(
+  CreatePrimitiveBrushTool& tool, std::weak_ptr<MapDocument> document)
   : m_tool{tool}
   , m_document{document}
 {
 }
 
-Tool& CreateSimpleBrushToolController3D::tool()
+Tool& CreatePrimitiveBrushToolController3D::tool()
 {
   return m_tool;
 }
 
-const Tool& CreateSimpleBrushToolController3D::tool() const
+const Tool& CreatePrimitiveBrushToolController3D::tool() const
 {
   return m_tool;
 }
 
 namespace
 {
-class CreateSimpleBrushDragDelegate : public HandleDragTrackerDelegate
+class CreatePrimitiveBrushDragDelegate : public HandleDragTrackerDelegate
 {
 private:
-  CreateSimpleBrushTool& m_tool;
+  CreatePrimitiveBrushTool& m_tool;
   vm::bbox3 m_worldBounds;
 
 public:
-  CreateSimpleBrushDragDelegate(CreateSimpleBrushTool& tool, const vm::bbox3& worldBounds)
+  CreatePrimitiveBrushDragDelegate(CreatePrimitiveBrushTool& tool, const vm::bbox3& worldBounds)
     : m_tool{tool}
     , m_worldBounds{worldBounds}
   {
@@ -211,7 +211,7 @@ private:
 };
 } // namespace
 
-std::unique_ptr<DragTracker> CreateSimpleBrushToolController3D::acceptMouseDrag(
+std::unique_ptr<DragTracker> CreatePrimitiveBrushToolController3D::acceptMouseDrag(
   const InputState& inputState)
 {
   using namespace Model::HitFilters;
@@ -237,13 +237,13 @@ std::unique_ptr<DragTracker> CreateSimpleBrushToolController3D::acceptMouseDrag(
     hit.isMatch() ? hit.hitPoint() : inputState.defaultPointUnderMouse();
 
   return createHandleDragTracker(
-    CreateSimpleBrushDragDelegate{m_tool, document->worldBounds()},
+    CreatePrimitiveBrushDragDelegate{m_tool, document->worldBounds()},
     inputState,
     initialHandlePosition,
     initialHandlePosition);
 }
 
-bool CreateSimpleBrushToolController3D::cancel()
+bool CreatePrimitiveBrushToolController3D::cancel()
 {
   return false;
 }

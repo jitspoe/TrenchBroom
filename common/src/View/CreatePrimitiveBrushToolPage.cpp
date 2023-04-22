@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2010-2017 Kristian Duske
+ Copyright (C) 2010-2023 Kristian Duske, Nathan "jitspoe" Wulf
 
  This file is part of TrenchBroom.
 
@@ -17,7 +17,8 @@
  along with TrenchBroom. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "MoveObjectsToolPage.h"
+#include "CreatePrimitiveBrushToolPage.h"
+#include "CreatePrimitiveBrushTool.h"
 
 #include "View/MapDocument.h"
 #include "View/ViewConstants.h"
@@ -30,15 +31,17 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QSpinBox>
 
 namespace TrenchBroom
 {
 namespace View
 {
-MoveObjectsToolPage::MoveObjectsToolPage(
-  std::weak_ptr<MapDocument> document, QWidget* parent)
+CreatePrimitiveBrushToolPage::CreatePrimitiveBrushToolPage(
+  std::weak_ptr<MapDocument> document, CreatePrimitiveBrushTool& tool, QWidget* parent)
   : QWidget(parent)
   , m_document(document)
+  , m_tool(tool)
   , m_offset(nullptr)
   , m_button(nullptr)
 {
@@ -47,46 +50,57 @@ MoveObjectsToolPage::MoveObjectsToolPage(
   updateGui();
 }
 
-void MoveObjectsToolPage::connectObservers()
+void CreatePrimitiveBrushToolPage::connectObservers()
 {
   auto document = kdl::mem_lock(m_document);
   m_notifierConnection += document->selectionDidChangeNotifier.connect(
-    this, &MoveObjectsToolPage::selectionDidChange);
+    this, &CreatePrimitiveBrushToolPage::selectionDidChange);
 }
 
-void MoveObjectsToolPage::createGui()
+void CreatePrimitiveBrushToolPage::createGui()
 {
-  QLabel* text = new QLabel(tr("Move objects by"));
+  QLabel* numSidesLabel = new QLabel(tr("Number of Sides: "));
+  QSpinBox* radiusBox = new QSpinBox();
+  QSpinBox* numSidesBox = new QSpinBox();
   m_offset = new QLineEdit("0.0 0.0 0.0");
   m_button = new QPushButton(tr("Apply"));
 
-  connect(m_button, &QAbstractButton::clicked, this, &MoveObjectsToolPage::applyMove);
-  connect(m_offset, &QLineEdit::returnPressed, this, &MoveObjectsToolPage::applyMove);
+  numSidesBox->setRange(3, 256); // set before connecting callbacks because it will override the values
+  numSidesBox->setValue(m_tool.m_primitiveBrushData.numSides);
 
+  connect(m_button, &QAbstractButton::clicked, this, &CreatePrimitiveBrushToolPage::applyMove); // JITODO: Remove
+  connect(m_offset, &QLineEdit::returnPressed, this, &CreatePrimitiveBrushToolPage::applyMove);
+
+  connect(numSidesBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
+    [=](int numSidesValue) {
+      this->m_tool.m_primitiveBrushData.numSides = numSidesValue;
+      this->m_tool.update();
+    });
   auto* layout = new QHBoxLayout();
   layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(LayoutConstants::MediumHMargin);
 
-  layout->addWidget(text, 0, Qt::AlignVCenter);
-  layout->addWidget(m_offset, 0, Qt::AlignVCenter);
-  layout->addWidget(m_button, 0, Qt::AlignVCenter);
+  layout->addWidget(numSidesLabel, 0, Qt::AlignVCenter);
+  layout->addWidget(numSidesBox, 0, Qt::AlignVCenter);
+  //layout->addWidget(m_button, 0, Qt::AlignVCenter);
   layout->addStretch(1);
 
   setLayout(layout);
 }
 
-void MoveObjectsToolPage::updateGui()
+void CreatePrimitiveBrushToolPage::updateGui()
 {
+  // NOTE: This gets called after creating a brush, so we can't consider this to only be called when selecting brushes manually.
   auto document = kdl::mem_lock(m_document);
   m_button->setEnabled(document->hasSelectedNodes());
 }
 
-void MoveObjectsToolPage::selectionDidChange(const Selection&)
+void CreatePrimitiveBrushToolPage::selectionDidChange(const Selection&)
 {
   updateGui();
 }
 
-void MoveObjectsToolPage::applyMove()
+void CreatePrimitiveBrushToolPage::applyMove()
 {
   if (const auto delta = vm::parse<FloatType, 3>(m_offset->text().toStdString()))
   {
