@@ -58,3 +58,77 @@ void CreateSimpleBrushTool::update(const vm::bbox3& bounds)
 
 } // namespace View
 } // namespace TrenchBroom
+
+
+// JITODO: Separate file
+
+#include "MoveObjectsToolPage.h"
+
+namespace TrenchBroom
+{
+namespace View
+{
+CreatePrimitiveBrushTool::CreatePrimitiveBrushTool(std::weak_ptr<MapDocument> document)
+  : CreateBrushToolBase(false, document)
+{
+}
+
+void CreatePrimitiveBrushTool::update(const vm::bbox3& bounds)
+{
+  auto document = kdl::mem_lock(m_document);
+  const auto game = document->game();
+  const Model::BrushBuilder builder(
+    document->world()->mapFormat(),
+    document->worldBounds(),
+    game->defaultFaceAttribs());
+
+  std::vector<vm::vec3> positions;
+
+  vm::vec3 size;
+  vm::vec3 position = vm::vec3(0.0, 0.0, 0.0);
+
+  position = bounds.center();
+  size = bounds.max - bounds.min;
+  position[2] = bounds.min[2];
+
+
+  int numSides = 8;// m_primitiveData.numSides;
+  positions.reserve((unsigned int)numSides * 2);
+  for (int i = 0; i < 2; ++i) {
+    for (int j = 0; j < numSides; ++j) {
+      vm::vec3 v;
+
+      if (true) { //m_primitiveData.radiusMode == 0) { // TODO: Add enums or something
+        float angle = float(j + 0.5) * vm::Cf::two_pi() / float(numSides);
+        float a = vm::Cf::pi() / float(numSides); // Half angle
+        float ca = std::cos(a);
+        v[0] = std::cos(angle) * 0.5 * size[0] / ca;
+        v[1] = std::sin(angle) * 0.5 * size[1] / ca;
+      } else {
+        float angle = float(j) * vm::Cf::two_pi() / float(numSides);
+        v[0] = std::cos(angle) * 0.5 * size[0];
+        v[1] = std::sin(angle) * 0.5 * size[1];
+      }
+
+      v[2] = i * size[2];
+      v = v + position;
+      positions.push_back(v);
+    }
+  }
+
+  builder.createBrush(positions, document->currentTextureName())
+    .transform(
+      [&](Model::Brush&& b) { updateBrush(new Model::BrushNode(std::move(b))); })
+    .or_else([&](const Model::BrushError e) {
+      updateBrush(nullptr);
+      document->error() << "Could not update brush: " << e;
+    });
+}
+
+QWidget* CreatePrimitiveBrushTool::doCreatePage(QWidget* parent)
+{
+  return new CreatePrimitiveBrushToolPage(m_document, parent);
+}
+
+} // namespace View
+} // namespace TrenchBroom

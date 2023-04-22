@@ -304,6 +304,10 @@ public:
   bool canToggleCreateComplexBrushTool() const;
   bool createComplexBrushToolActive() const;
 
+  void toggleCreatePrimitiveBrushTool();
+  bool canToggleCreatePrimitiveBrushTool() const;
+  bool createPrimitiveBrushToolActive() const;
+
   void toggleClipTool();
   bool canToggleClipTool() const;
   bool clipToolActive() const;

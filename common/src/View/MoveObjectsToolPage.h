@@ -62,3 +62,40 @@ private:
 };
 } // namespace View
 } // namespace TrenchBroom
+
+
+// JITODO: Separate file
+namespace TrenchBroom
+{
+namespace View
+{
+class MapDocument;
+class Selection;
+
+class CreatePrimitiveBrushToolPage : public QWidget
+{
+  Q_OBJECT
+private:
+  std::weak_ptr<MapDocument> m_document;
+
+  QLineEdit* m_offset;
+  QAbstractButton* m_button;
+
+  NotifierConnection m_notifierConnection;
+
+public:
+  explicit CreatePrimitiveBrushToolPage(
+    std::weak_ptr<MapDocument> document, QWidget* parent = nullptr);
+
+private:
+  void connectObservers();
+
+  void createGui();
+  void updateGui();
+
+  void selectionDidChange(const Selection& selection);
+
+  void applyMove();
+};
+} // namespace View
+} // namespace TrenchBroom

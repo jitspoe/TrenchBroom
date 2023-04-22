@@ -96,3 +96,80 @@ void MoveObjectsToolPage::applyMove()
 }
 } // namespace View
 } // namespace TrenchBroom
+
+
+// JITODO: Separate file
+#include <QSpinBox>
+
+namespace TrenchBroom
+{
+namespace View
+{
+CreatePrimitiveBrushToolPage::CreatePrimitiveBrushToolPage(
+  std::weak_ptr<MapDocument> document, QWidget* parent)
+  : QWidget(parent)
+  , m_document(document)
+  , m_offset(nullptr)
+  , m_button(nullptr)
+{
+  createGui();
+  connectObservers();
+  updateGui();
+}
+
+void CreatePrimitiveBrushToolPage::connectObservers()
+{
+  auto document = kdl::mem_lock(m_document);
+  m_notifierConnection += document->selectionDidChangeNotifier.connect(
+    this, &CreatePrimitiveBrushToolPage::selectionDidChange);
+}
+
+void CreatePrimitiveBrushToolPage::createGui()
+{
+  QLabel* numSidesLabel = new QLabel(tr("Number of Sides: "));
+  QSpinBox* radiusBox = new QSpinBox();
+  QSpinBox* numSidesBox = new QSpinBox();
+  m_offset = new QLineEdit("0.0 0.0 0.0");
+  m_button = new QPushButton(tr("Apply"));
+  int numSides = 7; // JITODO: Store this somewhere
+
+
+  numSidesBox->setRange(3, 256); // set before connecting callbacks because it will override the values
+  numSidesBox->setValue(numSides);
+
+  connect(m_button, &QAbstractButton::clicked, this, &CreatePrimitiveBrushToolPage::applyMove);
+  connect(m_offset, &QLineEdit::returnPressed, this, &CreatePrimitiveBrushToolPage::applyMove);
+
+  auto* layout = new QHBoxLayout();
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(LayoutConstants::MediumHMargin);
+
+  layout->addWidget(numSidesLabel, 0, Qt::AlignVCenter);
+  layout->addWidget(numSidesBox, 0, Qt::AlignVCenter);
+  //layout->addWidget(m_button, 0, Qt::AlignVCenter);
+  layout->addStretch(1);
+
+  setLayout(layout);
+}
+
+void CreatePrimitiveBrushToolPage::updateGui()
+{
+  auto document = kdl::mem_lock(m_document);
+  m_button->setEnabled(document->hasSelectedNodes());
+}
+
+void CreatePrimitiveBrushToolPage::selectionDidChange(const Selection&)
+{
+  updateGui();
+}
+
+void CreatePrimitiveBrushToolPage::applyMove()
+{
+  if (const auto delta = vm::parse<FloatType, 3>(m_offset->text().toStdString()))
+  {
+    auto document = kdl::mem_lock(m_document);
+    document->translateObjects(*delta);
+  }
+}
+} // namespace View
+} // namespace TrenchBroom

@@ -1761,6 +1761,24 @@ bool MapFrame::createComplexBrushToolActive() const
   return m_mapView->createComplexBrushToolActive();
 }
 
+void MapFrame::toggleCreatePrimitiveBrushTool()
+{
+  if (canToggleCreatePrimitiveBrushTool())
+  {
+    m_mapView->toggleCreatePrimitiveBrushTool();
+  }
+}
+
+bool MapFrame::canToggleCreatePrimitiveBrushTool() const
+{
+  return m_mapView->canToggleCreatePrimitiveBrushTool();
+}
+
+bool MapFrame::createPrimitiveBrushToolActive() const
+{
+  return m_mapView->createPrimitiveBrushToolActive();
+}
+
 void MapFrame::toggleClipTool()
 {
   if (canToggleClipTool())

@@ -249,3 +249,213 @@ bool CreateSimpleBrushToolController3D::cancel()
 }
 } // namespace View
 } // namespace TrenchBroom
+
+// JITODO: Separate file
+
+namespace TrenchBroom
+{
+namespace View
+{
+CreatePrimitiveBrushToolController3D::CreatePrimitiveBrushToolController3D(
+  CreatePrimitiveBrushTool& tool, std::weak_ptr<MapDocument> document)
+  : m_tool{tool}
+  , m_document{document}
+{
+}
+
+Tool& CreatePrimitiveBrushToolController3D::tool()
+{
+  return m_tool;
+}
+
+const Tool& CreatePrimitiveBrushToolController3D::tool() const
+{
+  return m_tool;
+}
+
+namespace
+{
+class CreatePrimitiveBrushDragDelegate : public HandleDragTrackerDelegate
+{
+private:
+  CreatePrimitiveBrushTool& m_tool;
+  vm::bbox3 m_worldBounds;
+
+public:
+  CreatePrimitiveBrushDragDelegate(CreatePrimitiveBrushTool& tool, const vm::bbox3& worldBounds)
+    : m_tool{tool}
+    , m_worldBounds{worldBounds}
+  {
+  }
+
+  HandlePositionProposer start(
+    const InputState& inputState,
+    const vm::vec3& initialHandlePosition,
+    const vm::vec3& handleOffset)
+  {
+    const auto currentBounds =
+      makeBounds(inputState, initialHandlePosition, initialHandlePosition);
+    m_tool.update(currentBounds);
+    m_tool.refreshViews();
+
+    return makeHandlePositionProposer(
+      makePlaneHandlePicker(vm::horizontal_plane(initialHandlePosition), handleOffset),
+      makeIdentityHandleSnapper());
+  }
+
+  std::optional<UpdateDragConfig> modifierKeyChange(
+    const InputState& inputState, const DragState& dragState)
+  {
+    if (inputState.modifierKeys() == ModifierKeys::MKAlt)
+    {
+      return UpdateDragConfig{
+        makeHandlePositionProposer(
+          makeLineHandlePicker(
+            vm::line3{dragState.currentHandlePosition, vm::vec3::pos_z()},
+            dragState.handleOffset),
+          makeIdentityHandleSnapper()),
+        ResetInitialHandlePosition::Keep};
+    }
+
+    return UpdateDragConfig{
+      makeHandlePositionProposer(
+        makePlaneHandlePicker(
+          vm::horizontal_plane(dragState.currentHandlePosition), dragState.handleOffset),
+        makeIdentityHandleSnapper()),
+      ResetInitialHandlePosition::Keep};
+  }
+
+  DragStatus drag(
+    const InputState& inputState,
+    const DragState& dragState,
+    const vm::vec3& proposedHandlePosition)
+  {
+    if (updateBounds(
+          inputState,
+          dragState.initialHandlePosition,
+          dragState.currentHandlePosition,
+          proposedHandlePosition))
+    {
+      m_tool.refreshViews();
+      return DragStatus::Continue;
+    }
+    return DragStatus::Deny;
+  }
+
+  void end(const InputState&, const DragState&) { m_tool.createBrush(); }
+
+  void cancel(const DragState&) { m_tool.cancel(); }
+
+  void render(
+    const InputState&,
+    const DragState&,
+    Renderer::RenderContext& renderContext,
+    Renderer::RenderBatch& renderBatch) const
+  {
+    m_tool.render(renderContext, renderBatch);
+  }
+
+private:
+  bool updateBounds(
+    const InputState& inputState,
+    const vm::vec3& initialHandlePosition,
+    const vm::vec3& lastHandlePosition,
+    const vm::vec3& currentHandlePosition)
+  {
+    const auto lastBounds =
+      makeBounds(inputState, initialHandlePosition, lastHandlePosition);
+    const auto currentBounds =
+      makeBounds(inputState, initialHandlePosition, currentHandlePosition);
+
+    if (currentBounds.is_empty() || currentBounds == lastBounds)
+    {
+      return false;
+    }
+
+    m_tool.update(currentBounds);
+    return true;
+  }
+
+  vm::bbox3 makeBounds(
+    const InputState& inputState,
+    const vm::vec3& initialHandlePosition,
+    const vm::vec3& currentHandlePosition) const
+  {
+    const auto bounds = vm::bbox3{
+      vm::min(initialHandlePosition, currentHandlePosition),
+      vm::max(initialHandlePosition, currentHandlePosition)};
+    return vm::intersect(snapBounds(inputState, bounds), m_worldBounds);
+  }
+
+  vm::bbox3 snapBounds(const InputState& inputState, vm::bbox3 bounds) const
+  {
+
+    // prevent flickering due to very small rounding errors
+    bounds.min = vm::correct(bounds.min);
+    bounds.max = vm::correct(bounds.max);
+
+    const auto& grid = m_tool.grid();
+    bounds.min = grid.snapDown(bounds.min);
+    bounds.max = grid.snapUp(bounds.max);
+
+    const auto& camera = inputState.camera();
+    const auto cameraPosition = vm::vec3{camera.position()};
+
+    for (size_t i = 0; i < 3; i++)
+    {
+      if (bounds.max[i] <= bounds.min[i])
+      {
+        if (bounds.min[i] < cameraPosition[i])
+        {
+          bounds.max[i] = bounds.min[i] + grid.actualSize();
+        }
+        else
+        {
+          bounds.min[i] = bounds.max[i] - grid.actualSize();
+        }
+      }
+    }
+
+    return bounds;
+  }
+};
+} // namespace
+
+std::unique_ptr<DragTracker> CreatePrimitiveBrushToolController3D::acceptMouseDrag(
+  const InputState& inputState)
+{
+  using namespace Model::HitFilters;
+
+  if (!inputState.mouseButtonsPressed(MouseButtons::MBLeft))
+  {
+    return nullptr;
+  }
+
+  if (!inputState.modifierKeysPressed(ModifierKeys::MKNone))
+  {
+    return nullptr;
+  }
+
+  auto document = kdl::mem_lock(m_document);
+  if (document->hasSelection())
+  {
+    return nullptr;
+  }
+
+  const auto& hit = inputState.pickResult().first(type(Model::BrushNode::BrushHitType));
+  const auto initialHandlePosition =
+    hit.isMatch() ? hit.hitPoint() : inputState.defaultPointUnderMouse();
+
+  return createHandleDragTracker(
+    CreatePrimitiveBrushDragDelegate{m_tool, document->worldBounds()},
+    inputState,
+    initialHandlePosition,
+    initialHandlePosition);
+}
+
+bool CreatePrimitiveBrushToolController3D::cancel()
+{
+  return false;
+}
+} // namespace View
+} // namespace TrenchBroom

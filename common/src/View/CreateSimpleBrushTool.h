@@ -38,3 +38,23 @@ public:
 };
 } // namespace View
 } // namespace TrenchBroom
+
+
+// JITODO: Create separate file
+namespace TrenchBroom
+{
+namespace View
+{
+class MapDocument;
+
+class CreatePrimitiveBrushTool : public CreateBrushToolBase
+{
+public:
+  explicit CreatePrimitiveBrushTool(std::weak_ptr<MapDocument> document);
+  void update(const vm::bbox3& bounds);
+
+private:
+  QWidget* doCreatePage(QWidget* parent) override;
+};
+} // namespace View
+} // namespace TrenchBroom
