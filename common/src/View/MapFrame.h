@@ -82,9 +82,9 @@ class SignalDelayer;
 class SwitchableMapViewContainer;
 class Tool;
 
-struct PrimativeData
+struct PrimitiveData
 {
-  int primativeType = 0;
+  int primitiveType = 0;
   int numSides = 8;
   int radiusMode = 0;
   int axis = 0;
@@ -145,8 +145,8 @@ private:
   SignalDelayer* m_updateActionStateSignalDelayer;
   SignalDelayer* m_updateStatusBarSignalDelayer;
 
-public: // For creating primatives (cylinders, etc)
-  PrimativeData m_primativeData;
+public: // For creating primitives (cylinders, etc)
+  PrimitiveData m_primitiveData;
 
 public:
   MapFrame(FrameManager* frameManager, std::shared_ptr<MapDocument> document);
@@ -409,8 +409,8 @@ public:
 
   void revealTexture(const Assets::Texture* texture);
 
-  void showPrimativeDialog();
-  void makePrimative();
+  void showPrimitiveDialog();
+  void makePrimitive();
 
   void debugPrintVertices();
   void debugCreateBrush();
@@ -440,13 +440,13 @@ private:
   void triggerAutosave();
 };
 
-class PrimativeWindow : public QDialog
+class PrimitiveWindow : public QDialog
 {
   Q_OBJECT
 private:
-  PrimativeData m_primativeData;
+  PrimitiveData m_primitiveData;
 public:
-  PrimativeWindow(QWidget* parent = nullptr);
+  PrimitiveWindow(QWidget* parent = nullptr);
 };
 
 class DebugPaletteWindow : public QDialog

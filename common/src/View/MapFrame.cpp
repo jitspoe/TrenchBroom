@@ -2238,20 +2238,20 @@ void MapFrame::revealTexture(const Assets::Texture* texture)
   m_inspector->faceInspector()->revealTexture(texture);
 }
 
-void MapFrame::showPrimativeDialog()
+void MapFrame::showPrimitiveDialog()
 {
-  PrimativeWindow *window = new PrimativeWindow(this);
+  PrimitiveWindow *window = new PrimitiveWindow(this);
   showModelessDialog(window);
 }
 
-void MapFrame::makePrimative()
+void MapFrame::makePrimitive()
 {
   std::vector<vm::vec3> positions;
 
   vm::vec3 size;
   vm::vec3 position = vm::vec3(0.0, 0.0, 0.0);
   const auto& selectedNodes = m_document->selectedNodes();
-  bool useBrushBounds = m_primativeData.useBrushBounds;
+  bool useBrushBounds = m_primitiveData.useBrushBounds;
   Model::BrushNode* selectedBrush = nullptr;
   if (!selectedNodes.brushes().empty()) {
     selectedBrush = selectedNodes.brushes().front();
@@ -2264,26 +2264,37 @@ void MapFrame::makePrimative()
   }
 
   if (!useBrushBounds) {
-    size[0] = m_primativeData.diameter;
-    size[1] = m_primativeData.diameter;
-    size[2] = m_primativeData.height;
+    size[0] = m_primitiveData.diameter;
+    size[1] = m_primitiveData.diameter;
+    size[2] = m_primitiveData.height;
   }
 
-  int numSides = m_primativeData.numSides;
+  int numSides = m_primitiveData.numSides;
   positions.reserve((unsigned int)numSides * 2);
   for (int i = 0; i < 2; ++i) {
     for (int j = 0; j < numSides; ++j) {
       vm::vec3 v;
-      float angle = float(j) * vm::Cf::two_pi() / float(numSides);
-      v[0] = std::cos(angle) * 0.5 * size[0];
-      v[1] = std::sin(angle) * 0.5 * size[1];
+      
+
+      if (m_primitiveData.radiusMode == 0) { // TODO: Add enums or something
+        float angle = float(j + 0.5) * vm::Cf::two_pi() / float(numSides);
+        float a = vm::Cf::pi() / float(numSides); // Half angle
+        float ca = std::cos(a);
+        v[0] = std::cos(angle) * 0.5 * size[0] / ca;
+        v[1] = std::sin(angle) * 0.5 * size[1] / ca;
+      } else {
+        float angle = float(j) * vm::Cf::two_pi() / float(numSides);
+        v[0] = std::cos(angle) * 0.5 * size[0];
+        v[1] = std::sin(angle) * 0.5 * size[1];
+      }
+
       v[2] = i * size[2];
       v = v + position;
       positions.push_back(v);
     }
   }
   // This could stand to be done better so we don't have 2 undo's.
-  if (m_primativeData.replaceSelectedBrush)
+  if (m_primitiveData.replaceSelectedBrush)
   {
     m_document->deleteObjects();
   }
@@ -2531,12 +2542,12 @@ void MapFrame::triggerAutosave()
 }
 
 
-// PrimativeWindow
+// PrimitiveWindow
 
-PrimativeWindow::PrimativeWindow(QWidget* parent)
+PrimitiveWindow::PrimitiveWindow(QWidget* parent)
   : QDialog(parent)
 {
-  setWindowTitle(tr("Make Primative"));
+  setWindowTitle(tr("Make Primitive"));
   QLabel* numSidesLabel = new QLabel(tr("Number of sides:"));
   QSpinBox* numSidesBox = new QSpinBox();
   QRadioButton* stylePlaneButton = new QRadioButton(tr("Plane Style"));
@@ -2556,35 +2567,45 @@ PrimativeWindow::PrimativeWindow(QWidget* parent)
   QPushButton* button = new QPushButton(tr("Create Brush"));
   QVBoxLayout* outerVBoxLayout = new QVBoxLayout();
 
-  m_primativeData = ((MapFrame*)(parent))->m_primativeData; // Create a local copy of the primative data in case the user cancels.
+  m_primitiveData = ((MapFrame*)(parent))->m_primitiveData; // Create a local copy of the primitive data in case the user cancels.
   numSidesBox->setRange(3, 256); // set before connecting callbacks because it will override the values
-  numSidesBox->setValue(m_primativeData.numSides);
+  numSidesBox->setValue(m_primitiveData.numSides);
   radiusBox->setRange(1, 4096);
-  radiusBox->setValue(m_primativeData.diameter / 2.0f);
+  radiusBox->setValue(m_primitiveData.diameter / 2.0f);
   diameterBox->setRange(2, 8192);
   diameterBox->setSingleStep(2);
-  diameterBox->setValue(m_primativeData.diameter);
+  diameterBox->setValue(m_primitiveData.diameter);
   heightBox->setRange(1, 4096);
-  heightBox->setValue(m_primativeData.height);
-  replaceSelectedBrushCheck->setChecked(m_primativeData.replaceSelectedBrush);
+  heightBox->setValue(m_primitiveData.height);
+  replaceSelectedBrushCheck->setChecked(m_primitiveData.replaceSelectedBrush);
+  stylePlaneButton->setChecked(m_primitiveData.radiusMode == 0);
+  styleVertexButton->setChecked(m_primitiveData.radiusMode == 1);
 
   connect(numSidesBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
     [=](int numSidesValue) {
-      this->m_primativeData.numSides = numSidesValue;
+      this->m_primitiveData.numSides = numSidesValue;
+    });
+  connect(stylePlaneButton, &QRadioButton::toggled, this,
+    [=]() {
+      this->m_primitiveData.radiusMode = 0;
+    });
+  connect(styleVertexButton, &QRadioButton::toggled, this,
+    [=]() {
+      this->m_primitiveData.radiusMode = 1;
     });
   connect(radiusBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
     [=](int radiusValue) {
-      this->m_primativeData.diameter = radiusValue * 2.0f;
+      this->m_primitiveData.diameter = radiusValue * 2.0f;
       diameterBox->setValue(radiusValue * 2.0f);
     });
   connect(diameterBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
     [=](int diameterValue) {
-      this->m_primativeData.diameter = diameterValue;
+      this->m_primitiveData.diameter = diameterValue;
       radiusBox->setValue(diameterValue / 2.0f);
     });
   connect(replaceSelectedBrushCheck, &QCheckBox::stateChanged,
     [=](int state) {
-      this->m_primativeData.replaceSelectedBrush = state != Qt::Unchecked;
+      this->m_primitiveData.replaceSelectedBrush = state != Qt::Unchecked;
     });
   connect(useBrushBoundsCheck, &QCheckBox::stateChanged,
     [=](int state) {
@@ -2594,15 +2615,15 @@ PrimativeWindow::PrimativeWindow(QWidget* parent)
       diameterLabel->setEnabled(state == Qt::Unchecked);
       heightBox->setEnabled(state == Qt::Unchecked);
       heightLabel->setEnabled(state == Qt::Unchecked);
-      this->m_primativeData.useBrushBounds = state != Qt::Unchecked;
+      this->m_primitiveData.useBrushBounds = state != Qt::Unchecked;
     });
   connect(button, &QPushButton::clicked, this,
     [=]() {
-      ((MapFrame*)(parent))->m_primativeData = m_primativeData;
-      ((MapFrame*)(parent))->makePrimative();
+      ((MapFrame*)(parent))->m_primitiveData = m_primitiveData;
+      ((MapFrame*)(parent))->makePrimitive();
     });
 
-  useBrushBoundsCheck->setChecked(m_primativeData.useBrushBounds); // Set after connecting callbacks so the setEnabled logic works.
+  useBrushBoundsCheck->setChecked(m_primitiveData.useBrushBounds); // Set after connecting callbacks so the setEnabled logic works.
   styleButtonGroup->addButton(stylePlaneButton);
   styleButtonGroup->addButton(styleVertexButton);
   int row = 0;
