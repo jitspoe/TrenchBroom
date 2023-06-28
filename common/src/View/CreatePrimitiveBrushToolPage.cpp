@@ -22,6 +22,7 @@
 
 #include "View/MapDocument.h"
 #include "View/ViewConstants.h"
+#include "View/QtUtils.h"
 
 #include <kdl/memory_utils.h>
 #include <vecmath/vec.h>
@@ -33,6 +34,8 @@
 #include <QPushButton>
 #include <QSpinBox>
 #include <QComboBox>
+#include <QButtonGroup>
+#include <QToolButton>
 
 namespace TrenchBroom
 {
@@ -43,6 +46,8 @@ CreatePrimitiveBrushToolPage::CreatePrimitiveBrushToolPage(
   : QWidget(parent)
   , m_document(document)
   , m_tool(tool)
+  , m_radiusModeEdgeButton(nullptr)
+  , m_radiusModeVertexButton(nullptr)
 {
   createGui();
   connectObservers();
@@ -68,6 +73,16 @@ void CreatePrimitiveBrushToolPage::createGui()
   snapComboBox->addItem(tr("Integer"));
   snapComboBox->addItem(tr("Grid"));
   snapComboBox->setCurrentIndex(1);
+  QButtonGroup* radiusModeButtonGroup = new QButtonGroup();
+  m_radiusModeEdgeButton = createBitmapToggleButton("RadiusModeEdge.svg", tr("Radius is to edge"));
+  m_radiusModeEdgeButton->setIconSize(QSize(24, 24));
+  m_radiusModeVertexButton = createBitmapToggleButton("RadiusModeVertex.svg", tr("Radius is to vertex"));
+  m_radiusModeVertexButton->setIconSize(QSize(24, 24));
+  m_radiusModeEdgeButton->setObjectName("toolButton_borderOnCheck"); // Style sheet makes this have a border when checked, otherwise nothing.
+  m_radiusModeEdgeButton->setChecked(true);
+  m_radiusModeVertexButton->setObjectName("toolButton_borderOnCheck");
+  radiusModeButtonGroup->addButton(m_radiusModeEdgeButton);
+  radiusModeButtonGroup->addButton(m_radiusModeVertexButton);
 
   connect(numSidesBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
     [=](int numSidesValue) {
@@ -79,6 +94,16 @@ void CreatePrimitiveBrushToolPage::createGui()
       this->m_tool.m_primitiveBrushData.snapType = index;
       this->m_tool.update();
     });
+  connect(m_radiusModeEdgeButton, &QToolButton::clicked, this,
+    [=]() {
+      this->m_tool.m_primitiveBrushData.radiusMode = 0;
+      this->m_tool.update();
+    });
+  connect(m_radiusModeVertexButton, &QToolButton::clicked, this,
+    [=]() {
+      this->m_tool.m_primitiveBrushData.radiusMode = 1;
+      this->m_tool.update();
+    });
 
   auto* layout = new QHBoxLayout();
   layout->setContentsMargins(0, 0, 0, 0);
@@ -88,6 +113,8 @@ void CreatePrimitiveBrushToolPage::createGui()
   layout->addWidget(numSidesBox, 0, Qt::AlignVCenter);
   layout->addWidget(snapLabel, 0, Qt::AlignVCenter);
   layout->addWidget(snapComboBox, 0, Qt::AlignVCenter);
+  layout->addWidget(m_radiusModeEdgeButton, 0, Qt::AlignVCenter);
+  layout->addWidget(m_radiusModeVertexButton, 0, Qt::AlignVCenter);
   layout->addStretch(1);
 
   setLayout(layout);
