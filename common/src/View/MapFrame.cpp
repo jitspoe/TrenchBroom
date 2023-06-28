@@ -2293,25 +2293,36 @@ void MapFrame::makePrimitive()
 
   int numSides = m_primitiveData.numSides;
   positions.reserve((unsigned int)numSides * 2);
+  FloatType snap = 0.0;
+  if (m_primitiveData.snapToUnit) {
+    snap = 1.0f;
+  }
+  if (m_primitiveData.snapToGrid) {
+    snap = m_document->grid().actualSize();
+  }
+  positions.reserve(((unsigned int)numSides) * 2);
   for (int i = 0; i < 2; ++i) {
     for (int j = 0; j < numSides; ++j) {
       vm::vec3 v;
-      
 
-      if (m_primitiveData.radiusMode == 0) { // TODO: Add enums or something
-        float angle = float(j + 0.5) * vm::Cf::two_pi() / float(numSides);
-        float a = vm::Cf::pi() / float(numSides); // Half angle
-        float ca = std::cos(a);
+      if (m_primitiveData.radiusMode == 0) {
+        FloatType angle = FloatType(j + 0.5) * vm::Cf::two_pi() / FloatType(numSides) - vm::Cf::half_pi();
+        FloatType a = vm::Cf::pi() / FloatType(numSides); // Half angle
+        FloatType ca = std::cos(a);
         v[0] = std::cos(angle) * 0.5 * size[0] / ca;
         v[1] = std::sin(angle) * 0.5 * size[1] / ca;
-      } else {
-        float angle = float(j) * vm::Cf::two_pi() / float(numSides);
+      }
+      else {
+        FloatType angle = FloatType(j) * vm::Cf::two_pi() / FloatType(numSides) - vm::Cf::half_pi();
         v[0] = std::cos(angle) * 0.5 * size[0];
         v[1] = std::sin(angle) * 0.5 * size[1];
       }
 
       v[2] = i * size[2];
       v = v + position;
+      if (snap > 0.0f) {
+        v = round(v / snap) * snap;
+      }
       positions.push_back(v);
     }
   }
