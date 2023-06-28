@@ -227,9 +227,10 @@ std::unique_ptr<DragTracker> CreatePrimitiveBrushToolController3D::acceptMouseDr
   }
 
   auto document = kdl::mem_lock(m_document);
+
   if (document->hasSelection())
   {
-    return nullptr;
+    document->deselectAll();
   }
 
   const auto& hit = inputState.pickResult().first(type(Model::BrushNode::BrushHitType));
