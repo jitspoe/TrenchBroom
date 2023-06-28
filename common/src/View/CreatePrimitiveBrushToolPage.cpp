@@ -32,6 +32,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QComboBox>
 
 namespace TrenchBroom
 {
@@ -60,28 +61,40 @@ void CreatePrimitiveBrushToolPage::connectObservers()
 void CreatePrimitiveBrushToolPage::createGui()
 {
   QLabel* numSidesLabel = new QLabel(tr("Number of Sides: "));
+  QLabel* snapLabel = new QLabel(tr("Snap: "));
+  QComboBox* snapComboBox = new QComboBox();
   QSpinBox* radiusBox = new QSpinBox();
   QSpinBox* numSidesBox = new QSpinBox();
   m_offset = new QLineEdit("0.0 0.0 0.0");
   m_button = new QPushButton(tr("Apply"));
+  snapComboBox->addItem(tr("Disabled"));
+  snapComboBox->addItem(tr("Integer"));
+  snapComboBox->addItem(tr("Grid"));
 
   numSidesBox->setRange(3, 256); // set before connecting callbacks because it will override the values
   numSidesBox->setValue(m_tool.m_primitiveBrushData.numSides);
 
   connect(m_button, &QAbstractButton::clicked, this, &CreatePrimitiveBrushToolPage::applyMove); // JITODO: Remove
   connect(m_offset, &QLineEdit::returnPressed, this, &CreatePrimitiveBrushToolPage::applyMove);
-
   connect(numSidesBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
     [=](int numSidesValue) {
       this->m_tool.m_primitiveBrushData.numSides = numSidesValue;
       this->m_tool.update();
     });
+  connect(snapComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+    [=](int index) {
+      this->m_tool.m_primitiveBrushData.snapType = index;
+      this->m_tool.update();
+    });
+
   auto* layout = new QHBoxLayout();
   layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(LayoutConstants::MediumHMargin);
 
   layout->addWidget(numSidesLabel, 0, Qt::AlignVCenter);
   layout->addWidget(numSidesBox, 0, Qt::AlignVCenter);
+  layout->addWidget(snapLabel, 0, Qt::AlignVCenter);
+  layout->addWidget(snapComboBox, 0, Qt::AlignVCenter);
   //layout->addWidget(m_button, 0, Qt::AlignVCenter);
   layout->addStretch(1);
 

@@ -33,6 +33,7 @@ class MapDocument;
 struct PrimitiveBrushData
 {
   int numSides = 8;
+  int snapType = 1;
 };
 
 class CreatePrimitiveBrushTool : public CreateBrushToolBase

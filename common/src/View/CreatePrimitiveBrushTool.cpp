@@ -29,6 +29,7 @@
 #include "Model/Game.h"
 #include "Model/WorldNode.h"
 #include "View/MapDocument.h"
+#include "View/Grid.h"
 
 #include <kdl/memory_utils.h>
 #include <kdl/result.h>
@@ -63,25 +64,36 @@ void CreatePrimitiveBrushTool::update(const vm::bbox3& bounds)
 
 
   int numSides = m_primitiveBrushData.numSides;
-  positions.reserve((unsigned int)numSides * 2);
+  int snapType = m_primitiveBrushData.snapType;
+  FloatType snap = 0.0;
+  if (snapType == 1) {
+    snap = 1.0f;
+  }
+  else if (snapType == 2) {
+    snap = document->grid().actualSize();
+  }
+  positions.reserve(((unsigned int)numSides) * 2);
   for (int i = 0; i < 2; ++i) {
     for (int j = 0; j < numSides; ++j) {
       vm::vec3 v;
 
       if (true) { //m_primitiveData.radiusMode == 0) { // TODO: Add enums or something
-        float angle = float(j + 0.5) * vm::Cf::two_pi() / float(numSides);
-        float a = vm::Cf::pi() / float(numSides); // Half angle
-        float ca = std::cos(a);
+        FloatType angle = FloatType(j + 0.5) * vm::Cf::two_pi() / FloatType(numSides);
+        FloatType a = vm::Cf::pi() / FloatType(numSides); // Half angle
+        FloatType ca = std::cos(a);
         v[0] = std::cos(angle) * 0.5 * size[0] / ca;
         v[1] = std::sin(angle) * 0.5 * size[1] / ca;
       } else {
-        float angle = float(j) * vm::Cf::two_pi() / float(numSides);
+        FloatType angle = FloatType(j) * vm::Cf::two_pi() / FloatType(numSides);
         v[0] = std::cos(angle) * 0.5 * size[0];
         v[1] = std::sin(angle) * 0.5 * size[1];
       }
 
       v[2] = i * size[2];
       v = v + position;
+      if (snap > 0.0f) {
+        v = round(v / snap) * snap;
+      }
       positions.push_back(v);
     }
   }
