@@ -77,14 +77,14 @@ void CreatePrimitiveBrushTool::update(const vm::bbox3& bounds)
     for (int j = 0; j < numSides; ++j) {
       vm::vec3 v;
 
-      if (true) { //m_primitiveData.radiusMode == 0) { // TODO: Add enums or something
-        FloatType angle = FloatType(j + 0.5) * vm::Cf::two_pi() / FloatType(numSides);
+      if (m_primitiveBrushData.radiusMode == 0) { // TODO: Add enums or something
+        FloatType angle = FloatType(j + 0.5) * vm::Cf::two_pi() / FloatType(numSides) - vm::Cf::half_pi();
         FloatType a = vm::Cf::pi() / FloatType(numSides); // Half angle
         FloatType ca = std::cos(a);
         v[0] = std::cos(angle) * 0.5 * size[0] / ca;
         v[1] = std::sin(angle) * 0.5 * size[1] / ca;
       } else {
-        FloatType angle = FloatType(j) * vm::Cf::two_pi() / FloatType(numSides);
+        FloatType angle = FloatType(j) * vm::Cf::two_pi() / FloatType(numSides) - vm::Cf::half_pi();
         v[0] = std::cos(angle) * 0.5 * size[0];
         v[1] = std::sin(angle) * 0.5 * size[1];
       }

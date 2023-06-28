@@ -42,8 +42,6 @@ class CreatePrimitiveBrushToolPage : public QWidget
 private:
   std::weak_ptr<MapDocument> m_document;
   CreatePrimitiveBrushTool& m_tool;
-  QLineEdit* m_offset;
-  QAbstractButton* m_button;
   NotifierConnection m_notifierConnection;
 
 public:

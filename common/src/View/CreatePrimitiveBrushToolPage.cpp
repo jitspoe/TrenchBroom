@@ -43,8 +43,6 @@ CreatePrimitiveBrushToolPage::CreatePrimitiveBrushToolPage(
   : QWidget(parent)
   , m_document(document)
   , m_tool(tool)
-  , m_offset(nullptr)
-  , m_button(nullptr)
 {
   createGui();
   connectObservers();
@@ -61,21 +59,16 @@ void CreatePrimitiveBrushToolPage::connectObservers()
 void CreatePrimitiveBrushToolPage::createGui()
 {
   QLabel* numSidesLabel = new QLabel(tr("Number of Sides: "));
+  QSpinBox* numSidesBox = new QSpinBox();
+  numSidesBox->setRange(3, 256); // set before connecting callbacks so values won't get overwritten
+  numSidesBox->setValue(m_tool.m_primitiveBrushData.numSides);
   QLabel* snapLabel = new QLabel(tr("Snap: "));
   QComboBox* snapComboBox = new QComboBox();
-  QSpinBox* radiusBox = new QSpinBox();
-  QSpinBox* numSidesBox = new QSpinBox();
-  m_offset = new QLineEdit("0.0 0.0 0.0");
-  m_button = new QPushButton(tr("Apply"));
   snapComboBox->addItem(tr("Disabled"));
   snapComboBox->addItem(tr("Integer"));
   snapComboBox->addItem(tr("Grid"));
+  snapComboBox->setCurrentIndex(1);
 
-  numSidesBox->setRange(3, 256); // set before connecting callbacks because it will override the values
-  numSidesBox->setValue(m_tool.m_primitiveBrushData.numSides);
-
-  connect(m_button, &QAbstractButton::clicked, this, &CreatePrimitiveBrushToolPage::applyMove); // JITODO: Remove
-  connect(m_offset, &QLineEdit::returnPressed, this, &CreatePrimitiveBrushToolPage::applyMove);
   connect(numSidesBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
     [=](int numSidesValue) {
       this->m_tool.m_primitiveBrushData.numSides = numSidesValue;
@@ -95,7 +88,6 @@ void CreatePrimitiveBrushToolPage::createGui()
   layout->addWidget(numSidesBox, 0, Qt::AlignVCenter);
   layout->addWidget(snapLabel, 0, Qt::AlignVCenter);
   layout->addWidget(snapComboBox, 0, Qt::AlignVCenter);
-  //layout->addWidget(m_button, 0, Qt::AlignVCenter);
   layout->addStretch(1);
 
   setLayout(layout);
@@ -105,7 +97,6 @@ void CreatePrimitiveBrushToolPage::updateGui()
 {
   // NOTE: This gets called after creating a brush, so we can't consider this to only be called when selecting brushes manually.
   auto document = kdl::mem_lock(m_document);
-  m_button->setEnabled(document->hasSelectedNodes());
 }
 
 void CreatePrimitiveBrushToolPage::selectionDidChange(const Selection&)
@@ -113,13 +104,5 @@ void CreatePrimitiveBrushToolPage::selectionDidChange(const Selection&)
   updateGui();
 }
 
-void CreatePrimitiveBrushToolPage::applyMove()
-{
-  if (const auto delta = vm::parse<FloatType, 3>(m_offset->text().toStdString()))
-  {
-    auto document = kdl::mem_lock(m_document);
-    document->translateObjects(*delta);
-  }
-}
 } // namespace View
 } // namespace TrenchBroom

@@ -34,6 +34,7 @@ struct PrimitiveBrushData
 {
   int numSides = 8;
   int snapType = 1;
+  int radiusMode = 0;
 };
 
 class CreatePrimitiveBrushTool : public CreateBrushToolBase
